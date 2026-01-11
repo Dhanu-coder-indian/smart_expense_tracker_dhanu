@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard - Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Segoe UI, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #020617;
+      padding: 20px;
+    }
+
+    .sidebar h2 {
+      color: #38bdf8;
+      margin-bottom: 20px;
+    }
+
+    .sidebar button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: transparent;
+      border: 1px solid #38bdf8;
+      color: white;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .sidebar button:hover {
+      background: #38bdf8;
+      color: black;
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      background: #38bdf8;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #334155;
+    }
+
+    hr {
+      border: 1px solid #334155;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>Expense Tracker</h2>
+    <button onclick="showSection('home')">🏠 Home</button>
+    <button onclick="showSection('monthly')">📅 Monthly</button>
+    <button onclick="showSection('yearly')">📊 Yearly</button>
+    <button onclick="showSection('daily')">🗓 Daily</button>
+    <button onclick="logout()">🚪 Logout</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- HOME -->
+    <div id="home" class="section active">
+      <h2>Home</h2>
+
+      <h3>Add Expense</h3>
+      <input type="date" id="expenseDate">
+      <input id="amount" type="number" placeholder="Amount">
+      <input id="category" placeholder="Category">
+      <select id="type">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+      <button onclick="addExpense()">Add</button>
+
+      <hr>
+
+      <h3>Summary</h3>
+      <p>💰 Income: ₹<span id="income">0</span></p>
+      <p>💸 Expense: ₹<span id="expense">0</span></p>
+      <p>📉 Balance: ₹<span id="balance">0</span></p>
+
+      <h3>Category-wise Expenses</h3>
+      <canvas id="expenseChart"></canvas>
+
+      <hr>
+
+      <h3>Edit Expense</h3>
+      <input id="editAmount" placeholder="Amount">
+      <input id="editCategory" placeholder="Category">
+      <select id="editType">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+      <button onclick="updateExpense()">Update</button>
+
+      <hr>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Amount</th>
+            <th>Category</th>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="expenseTable"></tbody>
+      </table>
+
+      <button onclick="exportCSV()">⬇️ Export CSV</button>
+      <button onclick="exportPDF()">⬇️ Export PDF</button>
+    </div>
+
+    <!-- MONTHLY -->
+    <div id="monthly" class="section">
+      <h2>Monthly</h2>
+
+      <input type="month" id="monthPicker">
+      <button onclick="loadMonthlyTotal()">Calculate</button>
+      <p>Total Monthly Expense: ₹<span id="monthlyTotal">0</span></p>
+
+      <button onclick="exportMonthlyPDF()">⬇️ Download Monthly PDF</button>
+
+      <hr>
+
+      <button onclick="loadMonthlyChart()">Show Monthly Chart</button>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+
+    <!-- YEARLY -->
+    <div id="yearly" class="section">
+      <h2>Yearly</h2>
+
+      <input type="number" id="yearPicker" placeholder="Enter Year (e.g. 2026)">
+      <button onclick="loadYearlySummary()">Calculate</button>
+
+      <p>💰 Income: ₹<span id="yearIncome">0</span></p>
+      <p>💸 Expense: ₹<span id="yearExpense">0</span></p>
+      <p>📉 Balance: ₹<span id="yearBalance">0</span></p>
+
+      <hr>
+
+      <button onclick="loadYearlyChart()">Show Yearly Chart</button>
+      <canvas id="yearlyChart"></canvas>
+    </div>
+
+    <!-- DAILY -->
+<div id="daily" class="section">
+  <h2>Daily Expenses</h2>
+
+  <input type="date" id="filterDate">
+  <button onclick="loadDailyExpenses()">View</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Type</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="dailyExpenseTable"></tbody>
+  </table>
+</div>
+
+
+<script>
+/* ========= SECTION SWITCH ========= */
+function showSection(id) {
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* ========= AUTH ========= */
+const userId = localStorage.getItem("userId");
+if (!userId) window.location.href = "index.html";
+
+/* ========= DOM ========= */
+const expenseDate = document.getElementById("expenseDate");
+const amount = document.getElementById("amount");
+const category = document.getElementById("category");
+const type = document.getElementById("type");
+const dailyExpenseTable = document.getElementById("dailyExpenseTable");
+const expenseTable = document.getElementById("expenseTable");
+const filterDate = document.getElementById("filterDate");
+const monthPicker = document.getElementById("monthPicker");
+const monthlyTotal = document.getElementById("monthlyTotal");
+const yearPicker = document.getElementById("yearPicker");
+const yearIncome = document.getElementById("yearIncome");
+const yearExpense = document.getElementById("yearExpense");
+const yearBalance = document.getElementById("yearBalance");
+
+function addExpense() {
+  if (!expenseDate.value) {
+    alert("Please select a date");
+    return;
+  }
+  if (!amount.value || amount.value <= 0) {
+  alert("Enter a valid amount");
+  return;
+}
+
+  fetch("http://localhost:5000/expense", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "user-id": userId
+    },
+    body: JSON.stringify({
+      amount: amount.value,
+      category: category.value,
+      type: type.value,
+      date: expenseDate.value
+    })
+  }).then(() => { 
+    loadExpenses();
+    loadSummary();
+    loadChart();
+  });
+}
+
+function loadExpenses() {
+  fetch("http://localhost:5000/expenses", {
+    headers: {
+      "user-id": userId
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    expenseTable.innerHTML = "";
+    data.forEach(e => {
+      expenseTable.innerHTML += `
+        <tr>
+          <td>${e.amount}</td>
+          <td>${e.category}</td>
+          <td>${e.type}</td>
+          <td>${e.created_at}</td>
+          <td>
+            <button onclick="showEdit(${e.id}, '${e.amount}', '${e.category}', '${e.type}')">✏️</button>
+            <button onclick="deleteExpense('${e.id}')">❌</button>
+          </td>
+        </tr>`;
+    });
+  });
+}
+
+function loadSummary() {
+  fetch("http://localhost:5000/summary", {
+    headers: {
+      "user-id": userId
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    income.innerText = data.income;
+    expense.innerText = data.expense;
+    balance.innerText = data.balance;
+  });
+}
+let editId = null;
+
+let chart;
+
+function loadChart() {
+  fetch("http://localhost:5000/chart-data", {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const labels = data.map(d => d.category);
+    const values = data.map(d => d.total);
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("expenseChart"), {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Expenses",
+          data: values,
+          backgroundColor: "#38bdf8"
+        }]
+      }
+    });
+  });
+}
+
+let monthlyChart;
+
+function loadMonthlyChart() {
+  if (!monthPicker.value) {
+    alert("Please select a month");
+    return;
+  }
+
+  fetch(`http://localhost:5000/chart-data/monthly/${monthPicker.value}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const labels = data.map(d => d.category);
+    const values = data.map(d => d.total);
+
+    if (monthlyChart) monthlyChart.destroy();
+
+    monthlyChart = new Chart(
+      document.getElementById("monthlyChart"),
+      {
+        type: "pie",
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values
+          }]
+        }
+      }
+    );
+  });
+}
+
+function loadDailyExpenses() {
+  if (!filterDate.value) {
+    alert("Please select a date");
+    return;
+  }
+
+  fetch(`http://localhost:5000/expenses/by-date/${filterDate.value}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    dailyExpenseTable.innerHTML = "";
+
+    if (data.length === 0) {
+      dailyExpenseTable.innerHTML = `
+        <tr>
+          <td colspan="4">No expenses found</td>
+        </tr>`;
+      return;
+    }
+
+    data.forEach(e => {
+      dailyExpenseTable.innerHTML += `
+        <tr>
+          <td>${e.amount}</td>
+          <td>${e.category}</td>
+          <td>${e.type}</td>
+          <td>${e.created_at.split("T")[0]}</td>
+        </tr>`;
+    });
+  });
+}
+
+
+
+function loadMonthlyTotal() {
+  const month = monthPicker.value;
+
+  fetch(`http://localhost:5000/monthly-total/${month}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    monthlyTotal.innerText = data.total;
+  });
+}
+
+function loadYearlySummary() {
+  if (!yearPicker.value) {
+    alert("Please enter a year");
+    return;
+  }
+
+  fetch(`http://localhost:5000/yearly-summary/${yearPicker.value}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    yearIncome.innerText = data.income;
+    yearExpense.innerText = data.expense;
+    yearBalance.innerText = data.balance;
+  });
+}
+
+let yearlyChart;
+
+function loadYearlyChart() {
+  if (!yearPicker.value) {
+    alert("Please enter a year");
+    return;
+  }
+
+  fetch(`http://localhost:5000/chart-data/yearly/${yearPicker.value}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const labels = data.map(d => d.category);
+    const values = data.map(d => d.total);
+
+    if (yearlyChart) yearlyChart.destroy();
+
+    yearlyChart = new Chart(
+      document.getElementById("yearlyChart"),
+      {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Yearly Expenses",
+            data: values,
+            backgroundColor: "#22c55e"
+          }]
+        }
+      }
+    );
+  });
+}
+
+
+
+function showEdit(id, amount, category, type) {
+  editId = id;
+  editAmount.value = amount;
+  editCategory.value = category;
+  editType.value = type;
+}
+
+function updateExpense() {
+  if (!editId) return alert("Select expense to edit");
+
+  fetch(`http://localhost:5000/expense/${editId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "user-id": userId
+    },
+    body: JSON.stringify({
+      amount: editAmount.value,
+      category: editCategory.value,
+      type: editType.value
+    })
+  })
+  .then(() => {
+    editId = null;
+    loadExpenses();
+    loadSummary();
+    loadChart();
+  });
+}
+
+
+function deleteExpense(id) {
+  fetch(`http://localhost:5000/expense/${id}`, {
+    method: "DELETE",
+    headers: {
+      "user-id": userId
+    }
+  }).then(() => {
+    loadExpenses();
+    loadSummary();
+    loadChart();
+  });
+}
+
+
+/* 4️⃣ ADD EXPORT FUNCTIONS HERE */
+function exportCSV() {
+  fetch("http://localhost:5000/export/csv", {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "expenses.csv";
+    a.click();
+  });
+}
+
+function exportPDF() {
+  fetch("http://localhost:5000/export/pdf", {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "expenses.pdf";
+    a.click();
+  });
+}
+
+function exportMonthlyPDF() {
+  if (!monthPicker.value) {
+    alert("Please select a month");
+    return;
+  }
+
+  fetch(`http://localhost:5000/export/pdf/monthly/${monthPicker.value}`, {
+    headers: { "user-id": userId }
+  })
+  .then(res => res.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `expenses-${monthPicker.value}.pdf`;
+    a.click();
+  });
+}
+
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "index.html";
+}
+
+loadExpenses();
+loadSummary();
+loadChart();
+</script>
+</body>
+</html>

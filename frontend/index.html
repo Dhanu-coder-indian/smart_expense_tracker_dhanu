@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Expense Tracker Pro</title>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <style>
+    body {
+      font-family: Segoe UI;
+      background: #0f172a;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: #020617;
+      padding: 25px;
+      border-radius: 12px;
+      width: 380px;
+    }
+    input, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background: #38bdf8;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    p {
+      text-align: center;
+      color: #38bdf8;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script>
+const e = React.createElement;
+
+function App() {
+  const [isLogin, setIsLogin] = React.useState(true);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+
+  const authAction = () => {
+    const url = isLogin
+      ? "http://localhost:5000/login"
+      : "http://localhost:5000/register";
+
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.userId) {
+        localStorage.setItem("userId", data.userId);
+        window.location.href = "dashboard.html";
+      } else {
+        alert("Registered successfully! Please login.");
+        setIsLogin(true);
+      }
+    })
+    .catch(() => alert("Server error"));
+  };
+
+  return e("div", { className: "card" }, [
+    e("h2", {}, isLogin ? "Login" : "Register"),
+    e("input", {
+      placeholder: "Email",
+      value: email,
+      onChange: e => setEmail(e.target.value)
+    }),
+    e("input", {
+      type: "password",
+      placeholder: "Password",
+      value: password,
+      onChange: e => setPassword(e.target.value)
+    }),
+    e("button", { onClick: authAction }, isLogin ? "Login" : "Register"),
+    e("p", { onClick: () => setIsLogin(!isLogin) },
+      isLogin ? "New user? Register here" : "Already have an account? Login"
+    )
+  ]);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>
+
+
