@@ -285,7 +285,6 @@ function loadExpenses() {
           <td>${e.type}</td>
           <td>${e.created_at}</td>
           <td>
-            <button onclick="showEdit(${e.id}, '${e.amount}', '${e.category}', '${e.type}')">✏️</button>
             <button onclick="deleteExpense('${e.id}')">❌</button>
           </td>
         </tr>`;
@@ -337,13 +336,12 @@ function loadChart() {
 function loadDailyExpenses() {
   if (!filterDate.value) return alert("Select a date");
 
-  fetch(`${BASE_URL}/expenses/daily?date=${filterDate.value}`, {
+  fetch(`${BASE_URL}/expenses/by-date/${filterDate.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
     dailyExpenseTable.innerHTML = "";
-
     data.forEach(e => {
       dailyExpenseTable.innerHTML += `
         <tr>
@@ -360,7 +358,7 @@ function loadDailyExpenses() {
 function loadMonthlyTotal() {
   if (!monthPicker.value) return alert("Select month");
 
-  fetch(`${BASE_URL}/expenses/monthly?month=${monthPicker.value}`, {
+  fetch(`${BASE_URL}/monthly-total/${monthPicker.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
@@ -374,12 +372,11 @@ let monthlyChart;
 function loadMonthlyChart() {
   if (!monthPicker.value) return alert("Select month");
 
-  fetch(`${BASE_URL}/expenses/monthly/chart?month=${monthPicker.value}`, {
+  fetch(`${BASE_URL}/chart-data/monthly/${monthPicker.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-
     const labels = data.map(d => d.category);
     const values = data.map(d => d.total);
 
@@ -403,7 +400,7 @@ function loadMonthlyChart() {
 function loadYearlySummary() {
   if (!yearPicker.value) return alert("Enter year");
 
-  fetch(`${BASE_URL}/expenses/yearly?year=${yearPicker.value}`, {
+  fetch(`${BASE_URL}/yearly-summary/${yearPicker.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
@@ -419,13 +416,12 @@ let yearlyChart;
 function loadYearlyChart() {
   if (!yearPicker.value) return alert("Enter year");
 
-  fetch(`${BASE_URL}/expenses/yearly/chart?year=${yearPicker.value}`, {
+  fetch(`${BASE_URL}/chart-data/yearly/${yearPicker.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-
-    const labels = data.map(d => d.month);
+    const labels = data.map(d => d.category);
     const values = data.map(d => d.total);
 
     if (yearlyChart) yearlyChart.destroy();
@@ -444,10 +440,11 @@ function loadYearlyChart() {
   });
 }
 
+/* ================= MONTHLY PDF ================= */
 function exportMonthlyPDF() {
   if (!monthPicker.value) return alert("Select month");
 
-  fetch(`${BASE_URL}/export/monthly-pdf?month=${monthPicker.value}`, {
+  fetch(`${BASE_URL}/export/pdf/monthly/${monthPicker.value}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.blob())
@@ -459,7 +456,6 @@ function exportMonthlyPDF() {
     a.click();
   });
 }
-
 
 /* ================= DELETE ================= */
 function deleteExpense(id) {
@@ -512,5 +508,3 @@ loadExpenses();
 loadSummary();
 loadChart();
 </script>
-</body>
-</html>
