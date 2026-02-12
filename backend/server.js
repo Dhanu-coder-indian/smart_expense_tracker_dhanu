@@ -355,6 +355,10 @@ app.get('/chart-data/yearly/:year', auth, (req, res) => {
   );
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend running");
+});
+
 /* =========================
    SERVER START
 ========================= */
