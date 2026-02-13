@@ -241,6 +241,56 @@ app.get('/export/pdf', auth, (req, res) => {
   );
 });
 
+
+/* =========================
+   SUMMARY (HOME)
+========================= */
+app.get('/summary', auth, (req, res) => {
+  db.query(
+    `
+    SELECT
+      SUM(CASE WHEN type='income' THEN amount ELSE 0 END) AS income,
+      SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS expense
+    FROM expenses
+    WHERE user_id = ?
+    `,
+    [req.userId],
+    (err, result) => {
+      if (err) return res.status(500).send(err);
+
+      const income = result[0].income || 0;
+      const expense = result[0].expense || 0;
+
+      res.json({
+        income,
+        expense,
+        balance: income - expense
+      });
+    }
+  );
+});
+
+/* =========================
+   HOME CHART DATA
+========================= */
+app.get('/chart-data', auth, (req, res) => {
+  db.query(
+    `
+    SELECT category, SUM(amount) AS total
+    FROM expenses
+    WHERE user_id = ?
+    AND type = 'expense'
+    GROUP BY category
+    `,
+    [req.userId],
+    (err, result) => {
+      if (err) return res.status(500).send(err);
+      res.json(result);
+    }
+  );
+});
+
+
 /* =========================
    SERVER START
 ========================= */
