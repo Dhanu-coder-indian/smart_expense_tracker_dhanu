@@ -17,7 +17,6 @@
       height: 100vh;
     }
 
-    /* Sidebar */
     .sidebar {
       width: 220px;
       background: #020617;
@@ -45,20 +44,14 @@
       color: black;
     }
 
-    /* Content */
     .content {
       flex: 1;
       padding: 30px;
       overflow-y: auto;
     }
 
-    .section {
-      display: none;
-    }
-
-    .section.active {
-      display: block;
-    }
+    .section { display: none; }
+    .section.active { display: block; }
 
     input, select, button {
       padding: 10px;
@@ -95,7 +88,6 @@
 
 <div class="app">
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
     <h2>Expense Tracker</h2>
     <button onclick="showSection('home')">🏠 Home</button>
@@ -105,7 +97,6 @@
     <button onclick="logout()">🚪 Logout</button>
   </div>
 
-  <!-- CONTENT -->
   <div class="content">
 
     <!-- HOME -->
@@ -134,17 +125,6 @@
 
       <hr>
 
-      <h3>Edit Expense</h3>
-      <input id="editAmount" placeholder="Amount">
-      <input id="editCategory" placeholder="Category">
-      <select id="editType">
-        <option value="income">Income</option>
-        <option value="expense">Expense</option>
-      </select>
-      <button onclick="updateExpense()">Update</button>
-
-      <hr>
-
       <table>
         <thead>
           <tr>
@@ -157,9 +137,6 @@
         </thead>
         <tbody id="expenseTable"></tbody>
       </table>
-
-      <button onclick="exportCSV()">⬇️ Export CSV</button>
-      <button onclick="exportPDF()">⬇️ Export PDF</button>
     </div>
 
     <!-- MONTHLY -->
@@ -169,8 +146,6 @@
       <input type="month" id="monthPicker">
       <button onclick="loadMonthlyTotal()">Calculate</button>
       <p>Total Monthly Expense: ₹<span id="monthlyTotal">0</span></p>
-
-      <button onclick="exportMonthlyPDF()">⬇️ Download Monthly PDF</button>
 
       <hr>
 
@@ -182,7 +157,7 @@
     <div id="yearly" class="section">
       <h2>Yearly</h2>
 
-      <input type="number" id="yearPicker" placeholder="Enter Year (e.g. 2026)">
+      <input type="number" id="yearPicker" placeholder="Enter Year">
       <button onclick="loadYearlySummary()">Calculate</button>
 
       <p>💰 Income: ₹<span id="yearIncome">0</span></p>
@@ -196,60 +171,43 @@
     </div>
 
     <!-- DAILY -->
-<div id="daily" class="section">
-  <h2>Daily Expenses</h2>
+    <div id="daily" class="section">
+      <h2>Daily Expenses</h2>
 
-  <input type="date" id="filterDate">
-  <button onclick="loadDailyExpenses()">View</button>
+      <input type="date" id="filterDate">
+      <button onclick="loadDailyExpenses()">View</button>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Amount</th>
-        <th>Category</th>
-        <th>Type</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody id="dailyExpenseTable"></tbody>
-  </table>
+      <table>
+        <thead>
+          <tr>
+            <th>Amount</th>
+            <th>Category</th>
+            <th>Type</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="dailyExpenseTable"></tbody>
+      </table>
+    </div>
+
+  </div>
 </div>
 
-
 <script>
-/* ================= BACKEND BASE URL ================= */
+
 const BASE_URL = "https://smartexpensetrackerdhanu-production.up.railway.app";
 
-/* ========= SECTION SWITCH ========= */
+const userId = localStorage.getItem("userId");
+if (!userId) window.location.href = "index.html";
+
+/* ================= SECTION ================= */
 function showSection(id) {
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-/* ========= AUTH ========= */
-const userId = localStorage.getItem("userId");
-if (!userId) window.location.href = "index.html";
-
-/* ========= DOM ========= */
-const expenseDate = document.getElementById("expenseDate");
-const amount = document.getElementById("amount");
-const category = document.getElementById("category");
-const type = document.getElementById("type");
-const dailyExpenseTable = document.getElementById("dailyExpenseTable");
-const expenseTable = document.getElementById("expenseTable");
-const filterDate = document.getElementById("filterDate");
-const monthPicker = document.getElementById("monthPicker");
-const monthlyTotal = document.getElementById("monthlyTotal");
-const yearPicker = document.getElementById("yearPicker");
-const yearIncome = document.getElementById("yearIncome");
-const yearExpense = document.getElementById("yearExpense");
-const yearBalance = document.getElementById("yearBalance");
-
-/* ================= ADD EXPENSE ================= */
+/* ================= HOME ================= */
 function addExpense() {
-  if (!expenseDate.value) return alert("Please select a date");
-  if (!amount.value || amount.value <= 0) return alert("Enter valid amount");
-
   fetch(`${BASE_URL}/expense`, {
     method: "POST",
     headers: {
@@ -257,10 +215,10 @@ function addExpense() {
       "user-id": userId
     },
     body: JSON.stringify({
-      amount: amount.value,
-      category: category.value,
-      type: type.value,
-      date: expenseDate.value
+      amount: document.getElementById("amount").value,
+      category: document.getElementById("category").value,
+      type: document.getElementById("type").value,
+      date: document.getElementById("expenseDate").value
     })
   }).then(() => {
     loadExpenses();
@@ -269,62 +227,52 @@ function addExpense() {
   });
 }
 
-/* ================= LOAD EXPENSES ================= */
 function loadExpenses() {
   fetch(`${BASE_URL}/expenses`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    expenseTable.innerHTML = "";
+    const table = document.getElementById("expenseTable");
+    table.innerHTML = "";
     data.forEach(e => {
-      expenseTable.innerHTML += `
+      table.innerHTML += `
         <tr>
           <td>${e.amount}</td>
           <td>${e.category}</td>
           <td>${e.type}</td>
           <td>${e.created_at}</td>
-          <td>
-            <button onclick="deleteExpense('${e.id}')">❌</button>
-          </td>
+          <td><button onclick="deleteExpense('${e.id}')">❌</button></td>
         </tr>`;
     });
   });
 }
 
-/* ================= SUMMARY ================= */
 function loadSummary() {
   fetch(`${BASE_URL}/summary`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    income.innerText = data.income;
-    expense.innerText = data.expense;
-    balance.innerText = data.balance;
+    document.getElementById("income").innerText = data.income;
+    document.getElementById("expense").innerText = data.expense;
+    document.getElementById("balance").innerText = data.balance;
   });
 }
 
-/* ================= CHART ================= */
-let chart;
 function loadChart() {
   fetch(`${BASE_URL}/chart-data`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    const labels = data.map(d => d.category);
-    const values = data.map(d => d.total);
-
-    if (chart) chart.destroy();
-
-    chart = new Chart(document.getElementById("expenseChart"), {
+    new Chart(document.getElementById("expenseChart"), {
       type: "bar",
       data: {
-        labels: labels,
+        labels: data.map(d => d.category),
         datasets: [{
           label: "Expenses",
-          data: values,
+          data: data.map(d => d.total),
           backgroundColor: "#38bdf8"
         }]
       }
@@ -334,16 +282,16 @@ function loadChart() {
 
 /* ================= DAILY ================= */
 function loadDailyExpenses() {
-  if (!filterDate.value) return alert("Select a date");
-
-  fetch(`${BASE_URL}/expenses/by-date/${filterDate.value}`, {
+  const date = document.getElementById("filterDate").value;
+  fetch(`${BASE_URL}/expenses/by-date/${date}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    dailyExpenseTable.innerHTML = "";
+    const table = document.getElementById("dailyExpenseTable");
+    table.innerHTML = "";
     data.forEach(e => {
-      dailyExpenseTable.innerHTML += `
+      table.innerHTML += `
         <tr>
           <td>${e.amount}</td>
           <td>${e.category}</td>
@@ -354,41 +302,32 @@ function loadDailyExpenses() {
   });
 }
 
-/* ================= MONTHLY TOTAL ================= */
+/* ================= MONTHLY ================= */
 function loadMonthlyTotal() {
-  if (!monthPicker.value) return alert("Select month");
-
-  fetch(`${BASE_URL}/monthly-total/${monthPicker.value}`, {
+  const month = document.getElementById("monthPicker").value;
+  fetch(`${BASE_URL}/monthly-total/${month}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    monthlyTotal.innerText = data.total || 0;
+    document.getElementById("monthlyTotal").innerText = data.total;
   });
 }
 
-let monthlyChart;
-
 function loadMonthlyChart() {
-  if (!monthPicker.value) return alert("Select month");
-
-  fetch(`${BASE_URL}/chart-data/monthly/${monthPicker.value}`, {
+  const month = document.getElementById("monthPicker").value;
+  fetch(`${BASE_URL}/chart-data/monthly/${month}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    const labels = data.map(d => d.category);
-    const values = data.map(d => d.total);
-
-    if (monthlyChart) monthlyChart.destroy();
-
-    monthlyChart = new Chart(document.getElementById("monthlyChart"), {
+    new Chart(document.getElementById("monthlyChart"), {
       type: "bar",
       data: {
-        labels: labels,
+        labels: data.map(d => d.category),
         datasets: [{
           label: "Monthly Expenses",
-          data: values,
+          data: data.map(d => d.total),
           backgroundColor: "#38bdf8"
         }]
       }
@@ -398,41 +337,32 @@ function loadMonthlyChart() {
 
 /* ================= YEARLY ================= */
 function loadYearlySummary() {
-  if (!yearPicker.value) return alert("Enter year");
-
-  fetch(`${BASE_URL}/yearly-summary/${yearPicker.value}`, {
+  const year = document.getElementById("yearPicker").value;
+  fetch(`${BASE_URL}/yearly-summary/${year}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    yearIncome.innerText = data.income || 0;
-    yearExpense.innerText = data.expense || 0;
-    yearBalance.innerText = data.balance || 0;
+    document.getElementById("yearIncome").innerText = data.income;
+    document.getElementById("yearExpense").innerText = data.expense;
+    document.getElementById("yearBalance").innerText = data.balance;
   });
 }
 
-let yearlyChart;
-
 function loadYearlyChart() {
-  if (!yearPicker.value) return alert("Enter year");
-
-  fetch(`${BASE_URL}/chart-data/yearly/${yearPicker.value}`, {
+  const year = document.getElementById("yearPicker").value;
+  fetch(`${BASE_URL}/chart-data/yearly/${year}`, {
     headers: { "user-id": userId }
   })
   .then(res => res.json())
   .then(data => {
-    const labels = data.map(d => d.category);
-    const values = data.map(d => d.total);
-
-    if (yearlyChart) yearlyChart.destroy();
-
-    yearlyChart = new Chart(document.getElementById("yearlyChart"), {
+    new Chart(document.getElementById("yearlyChart"), {
       type: "bar",
       data: {
-        labels: labels,
+        labels: data.map(d => d.category),
         datasets: [{
           label: "Yearly Expenses",
-          data: values,
+          data: data.map(d => d.total),
           backgroundColor: "#38bdf8"
         }]
       }
@@ -440,24 +370,6 @@ function loadYearlyChart() {
   });
 }
 
-/* ================= MONTHLY PDF ================= */
-function exportMonthlyPDF() {
-  if (!monthPicker.value) return alert("Select month");
-
-  fetch(`${BASE_URL}/export/pdf/monthly/${monthPicker.value}`, {
-    headers: { "user-id": userId }
-  })
-  .then(res => res.blob())
-  .then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "monthly-report.pdf";
-    a.click();
-  });
-}
-
-/* ================= DELETE ================= */
 function deleteExpense(id) {
   fetch(`${BASE_URL}/expense/${id}`, {
     method: "DELETE",
@@ -469,36 +381,6 @@ function deleteExpense(id) {
   });
 }
 
-/* ================= EXPORT ================= */
-function exportCSV() {
-  fetch(`${BASE_URL}/export/csv`, {
-    headers: { "user-id": userId }
-  })
-  .then(res => res.blob())
-  .then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "expenses.csv";
-    a.click();
-  });
-}
-
-function exportPDF() {
-  fetch(`${BASE_URL}/export/pdf`, {
-    headers: { "user-id": userId }
-  })
-  .then(res => res.blob())
-  .then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "expenses.pdf";
-    a.click();
-  });
-}
-
-/* ================= LOGOUT ================= */
 function logout() {
   localStorage.clear();
   window.location.href = "index.html";
@@ -507,7 +389,8 @@ function logout() {
 loadExpenses();
 loadSummary();
 loadChart();
+
 </script>
-</div>
+
 </body>
 </html>
